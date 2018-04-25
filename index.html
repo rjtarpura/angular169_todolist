@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Bootstrap Example</title>
+			<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1">		  
+			<!-- Bootstrap CSS -->
+			<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+		  
+			<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		  
+			<!-- Bootstrap JS -->
+			<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  		
+			<!-- Angular JS -->
+			<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+		
+		<style>
+			.error{
+				color: red;
+				display:block;
+				margin-top: 5px;
+			}
+			.add_button{
+				color: #fff;
+				background-color: #337ab7;
+				border-color: #337ab7;
+			}
+			span.glyphicon{
+				display: flex;
+				float: right;
+			}
+			.panel-body li{
+				    margin-bottom: 10px;
+			}
+			p.tech_stack{
+			    //position: absolute;
+				//right: 19px;
+				//bottom: -12px;
+				
+				position: fixed;
+				right: 0px;
+				bottom: 0px;
+				width: 100%;
+				color:white;
+				background-color: #337ab7;
+				text-align: right;
+				padding: 3px 10px;
+			}
+			.container{
+				margin-top: 5px;
+			}
+		</style>
+		
+	</head>
+	
+<body>
+	<div class="container">
+		<div class="row">
+			<div ng-app="todoApp" ng-controller="todoCtrl">
+				<div class="col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-3">
+				  <div class="panel panel-primary">
+					<div class="panel-heading">Todo List</div>
+					<div class="panel-body">
+						<ol>
+							<li ng-repeat="x in list">{{x.task}} <span class="glyphicon glyphicon-trash" aria-hidden="true" ng-click="removeItem($index)"></span></li>
+						</ol>
+					</div>
+					<div class="panel-footer">
+						<div style="text-align: center;">
+							<input type="text" ng-model="task" ng-focus="clear()" placeholder="Enter Task here..." autofocus/>
+							<button ng-click="add($event)" class="add_button">Add</button>														
+						</div>
+						<span ng-show="error" class="error">{{errormsg}}</span>
+						<span ng-show="no_data">No tasks</span>
+						<p class="tech_stack">AngularJS 1.6.9 / Bootstrap 3.3.7 / jQuery 3.3.1</p>
+					</div>
+				  </div>				  
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+
+	<script>
+	var app = angular.module('todoApp', []);
+	app.controller('todoCtrl', function($scope,$http) {
+		$scope.list = [];
+		$scope.error = false;
+		$scope.errormsg = "";
+	
+		$http.get('get_task.php')
+			.then(function(response){
+				//First function handles success
+				$scope.no_data = true;
+				if(response.data.length != 0){
+					$scope.list = response.data;
+					$scope.no_data = false;
+				}				
+			},function(response){
+				//Second function handles error
+				$scope.error = true;
+				$scope.errormsg = "Unable to fetch data from server.";
+			});
+
+		$scope.add	 =	function($event){
+			$scope.error=false;
+			$scope.errormsg = "";
+			
+			if(!$scope.task){			
+				$scope.error=true;
+				$scope.errormsg = "Can't Add blank";
+			}else{
+				if($scope.list.length > 0 && $scope.list.filter(function(currentValue, index, arr){
+						return (currentValue.task==$scope.task)?true:false;
+					}).length > 0){
+						$scope.error = true;
+						$scope.errormsg = $scope.task+" already present";
+						$scope.task='';
+				}else{				
+					var dataObj = $.param({
+						task: $scope.task
+					});
+					
+					var config = {
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8;'
+						}
+					};
+					
+					$http.post('add_task.php', dataObj, config)
+					.then(
+						function (response) {
+							//console.log(response);							
+							$scope.list.push(response.data[0].data);
+							$scope.task='';
+							$scope.no_data = false;
+						},
+						function (response) {
+							$scope.error = true;
+							$scope.errormsg = $scope.task+" not added";
+						}
+					);					
+				}
+			}			
+			$($event.target).prev().focus();
+			$scope.no_data = ($scope.list.length == 0)?true:false;
+		}
+		
+		$scope.clear = function(){
+			
+		}
+		
+		$scope.removeItem = function(x){
+			if(!confirm("Are You sure you want to delete this item")) return;
+			var dataObj = $.param({
+				id: $scope.list[x].id
+			});
+			
+			var config = {
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8;'
+				}
+			};
+			
+			$http.post('remove_task.php', dataObj, config)
+			.then(
+				function (response) {
+					$scope.list.splice(x,1);
+				},
+				function (response) {
+					$scope.error = true;
+					$scope.errormsg = $scope.task+" not deleted";
+				}
+			);
+			$scope.no_data = ($scope.list.length == 0)?true:false;
+		}
+	});
+
+	</script>
+</html>
